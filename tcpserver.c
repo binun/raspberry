@@ -12,7 +12,7 @@
 #include <pthread.h>  //for threading , link with lpthread
 
 #define PORT 6666
-#define BUFSIZE 1024*1024
+#define BUFSIZE 8*1024*1024
 #define LOG "report.csv"
 
 typedef unsigned char byte;
@@ -36,20 +36,23 @@ void *timer_handler(void*);
 int main(int argc, char *argv[])
 {
 	int 	sockfd;
-	struct sockaddr_in cli_addr, serv_addr;
+	struct sockaddr_in6 cli_addr, serv_addr;
         struct sched_param params1;
         pthread_t timerthread;
+        
 
-	if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+	if((sockfd = socket(AF_INET6, SOCK_STREAM, 0)) < 0)
 		fprintf(stderr,"server: can't open stream socket\n"), exit(0);
 
 	memset((char *) &serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	serv_addr.sin_port = htons(PORT);
-	
-	if(bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
-		fprintf(stderr,"server: can't bind local address\n"), exit(0);
+
+	serv_addr.sin6_flowinfo = 0;
+        serv_addr.sin6_family = AF_INET6;
+        serv_addr.sin6_addr = in6addr_any;
+        serv_addr.sin6_port = htons(PORT);
+   
+        if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+           fprintf(stderr,"server: can't bind local address\n"), exit(0);
 
 	pthread_create(&timerthread, NULL, timer_handler, NULL);
         params1.sched_priority = sched_get_priority_min(SCHED_FIFO);
@@ -64,14 +67,16 @@ int main(int argc, char *argv[])
             pthread_t rpithread;
             struct sched_param params;
             int clilen = sizeof(cli_addr);
-            
+            char bufFilename[64] = "";
+            char theirIP[100]="";
+
 	    int client_sock = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 	    if(client_sock < 0)
 	     fprintf(stderr,"server: accept error\n"), exit(0);
             
-            char * theirIP = inet_ntoa(cli_addr.sin_addr);
-	    char bufFilename[64] = "";
-	    printf("Connection accepted from IP address: %s\n", theirIP);
+            inet_ntop(AF_INET6, &(cli_addr.sin6_addr),theirIP, 100);
+            printf("Incoming connection from client having IPv6 address: %s\n",theirIP);
+	    
 	    sprintf(bufFilename, "noise%d.bin", connectionNo + 1);
 	    strcpy(bufFiles[connectionNo].ip, theirIP);
 	    strcpy(bufFiles[connectionNo].filename, bufFilename);
