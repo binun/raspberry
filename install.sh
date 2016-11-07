@@ -14,11 +14,7 @@ else
 	exit 1;
 fi
 
-rpi-update
-
 cp ./options/new/sysctl.conf /etc
 gcc tcpserver.c -o tcpserver -lpthread
 
 reboot
-
-

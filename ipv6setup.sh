@@ -3,9 +3,19 @@
 
 DRY=0
 
-HEIGHT=3280
-WIDTH=2464
-FRAMERATE=30
+HEIGHT=2592
+WIDTH=1944
+
+#HEIGHT=3280
+#WIDTH=2464
+#HEIGHT=1920
+#WIDTH=1080
+
+MEASUREPERIOD=10
+MEASUREPORTION=30M
+
+FRAMERATE=60
+FORMAT=2
 
 IFACE=enp
 i=1
@@ -55,11 +65,11 @@ ifconfig -a | sed 's/[ \t].*//;/^$/d' | grep -v 'avahi' | grep $IFACE | (while r
 		sleep 1
 
 		#echo "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt) './streamv4.sh 1920 1080 4 30 $(cat myipv6.txt); bash -i' " > cmd.txt
-		gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt) './streamv4.sh $HEIGHT $WIDTH 8 $FRAMERATE $(cat myipv6.txt); bash -i' "
+		gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt) './streamv4.sh $HEIGHT $WIDTH $FORMAT $FRAMERATE $(cat myipv6.txt); bash -i' "
 		#gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt)"
 
 		i=$((i+1))
 	fi
 done)
 
-./measurequality.sh 10 &
+./measurequality.sh $MEASUREPERIOD $MEASUREPORTION &
