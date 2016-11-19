@@ -1,20 +1,15 @@
-#/bin/bash -i
+#!/bin/bash
+PC=10.10.11.32
+IFACE=enp10s0
+RPIS=(10.10.11.10)
+ifconfig $IFACE down
+ifconfig $IFACE $PC netmask 255.255.255.0 up # $PCADDR=10.10.11.32 is PC
+for rpi in ${RPIS[@]};
+do
+	route add default gw $rpi $IFACE;
+done
 
-YUM_CMD=$(which yum)
-APT_GET_CMD=$(which apt-get)
+ifconfig $IFACE txqueuelen 10000
+sysctl -p ./sysctl.conf
 
-if [[ ! -z $YUM_CMD ]]; then
-	yum -y update && apt-get -y upgrade
-	yum -y install netcat ent
-elif [[ ! -z $APT_GET_CMD ]]; then
-	apt-get -y update && apt-get -y upgrade
-	apt-get -y install netcat ent
-else
-	echo "error can't install package"
-	exit 1;
-fi
 
-cp ./options/new/sysctl.conf /etc
-gcc tcpserver.c -o tcpserver -lpthread
-
-reboot
