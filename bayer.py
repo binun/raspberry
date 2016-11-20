@@ -36,7 +36,8 @@ s.connect(sockaddr)
 
 connection = s.makefile('wb')
 time.sleep(1)
-camera.capture_sequence(outputs(),format='jpeg',use_video_port=False,burst=True)
+while True:
+	camera.capture_sequence(outputs(),format='rgb',use_video_port=False,burst=True)
 #
 #while True:
 	#camera.capture(stream, format='jpeg', bayer=True)
