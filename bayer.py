@@ -20,6 +20,7 @@ def outputs():
 
 port=6666
 interface="%usb0"
+frmat=sys.argv[5]
 camera = picamera.PiCamera()
 width=int(sys.argv[3])
 height=int(sys.argv[4])
@@ -37,7 +38,7 @@ s.connect(sockaddr)
 connection = s.makefile('wb')
 time.sleep(1)
 while True:
-	camera.capture_sequence(outputs(),format='rgb',use_video_port=False,burst=True)
+	camera.capture_sequence(outputs(),format=frmat,use_video_port=False,burst=True)
 #
 #while True:
 	#camera.capture(stream, format='jpeg', bayer=True)

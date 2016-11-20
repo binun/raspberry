@@ -12,26 +12,27 @@ HEIGHT=1920
 WIDTH=1080
 
 MEASUREPERIOD=10
-MEASUREPORTION=10M
+MEASUREPORTION=40M
 
 FRAMERATE=60
-FORMAT=3
 
-RPIFACE=eno
-i=1
+#FORMAT=3
+FORMAT=rgb
+
+PCIFACE=eno1
+RPIFACE=enp
 
 RPIS=rpientries.txt
-PCIFACE=enp
+
+
 MAIN_IPV6=$(ifconfig $PCIFACE | grep 'inet6 addr' | grep 'Scope:Link' | awk '{ print $3}')
 service network-manager stop
-
 rm -rf noise*.bin
 rm -f $RPIS
 
 gnome-terminal -x bash -c "./tcpserver"
 
-#gnome-terminal -x bash -c "nc -6 -u -vv -k -l -p 6666 > noise.bin"
-
+i=1
 ifconfig -a | sed 's/[ \t].*//;/^$/d' | grep -v 'avahi' | grep $RPIFACE | (while read id; do
 
 	STRLENGTH=$(echo $id | wc -m)
@@ -58,9 +59,9 @@ ifconfig -a | sed 's/[ \t].*//;/^$/d' | grep -v 'avahi' | grep $RPIFACE | (while
 		sleep 1
 
 		#gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt) './streamv4.sh $HEIGHT $WIDTH $FORMAT $(cat myipv6.txt) none 100 100 100 none; bash -i' "
-		#gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt) './bayer.sh $(cat myipv6.txt) $FRAMERATE $HEIGHT $WIDTH; bash -i' "
+		gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt) './bayer.sh $(cat myipv6.txt) $FRAMERATE $HEIGHT $WIDTH $FORMAT; bash -i' "
 
-		gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt)"
+		#gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt)"
 
 		i=$((i+1))
 	fi
