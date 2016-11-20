@@ -14,6 +14,7 @@
 #define PORT 6666
 #define BUFSIZE 8*1024*1024
 #define LOG "report.csv"
+#define FACTOR 4
 
 typedef unsigned char byte;
 typedef struct tagbufferFor {
@@ -112,7 +113,7 @@ void *connection_handler(void *connection)
                 continue;
 	   }
            
-           pthread_mutex_lock(&noise_mutex);
+       pthread_mutex_lock(&noise_mutex);
 	   fwrite(binbuffer, sizeof(byte), read_size, f);
            //printf("%d bytes were read\n", read_size);
 	   fflush(f);
@@ -130,6 +131,7 @@ void *timer_handler(void*arg)
         long diff=0;
         if (connectionNo>0)
            printf("%d ", snapshot++);
+           
         pthread_mutex_lock(&noise_mutex);
         for (i=0; i < connectionNo; i++) {
           struct stat buf;
@@ -142,7 +144,7 @@ void *timer_handler(void*arg)
           fstat(noise, &buf);
           close(noise);
           diff = (long)buf.st_size - bufFiles[i].prevsize;
-          printf("%d ", diff);
+          printf("%d ", FACTOR*diff);
           bufFiles[i].prevsize = buf.st_size;
         }
         

@@ -23,10 +23,5 @@ do
 	done
 	n=$(($n+$PERIOD))
 
-	#if (( $n % $REFRESH == 0 ))
-	#then
- 		#echo "Refresh noise files"
-		#rm -f noise*.bin
-	#fi
 	sleep $PERIOD
 done

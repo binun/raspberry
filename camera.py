@@ -27,21 +27,13 @@ stream=io.BytesIO();
 time.sleep(2);
 print ('Warming up ...');
 
+for frame in camera.capture_continuous(stream, format=frmat):
+	stream.seek(0)
+	stream.truncate()
+
 while True:
-	camera.capture(stream,format='rgb');
-	buff=numpy.fromstring(stream.getvalue(),dtype=numpy.uint8);
-	print buff.nbytes;
-	
-	bitmap=bitarray(int(buff.nbytes/8)+1);
-	bitmap.setall(0);
-	index=0;
-	print ('Begin');
-	for b in buff:
-		bitmap[index] = b & 1;
-		index+=1;
-		print(index);
-	#print(bitmap[4]);
-	#time.sleep(delay);	
+	camera.capture(stream,format='rgb')
+
  	stream.seek(0);
 	stream.truncate();
 
