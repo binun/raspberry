@@ -1,2 +1,2 @@
-enp0s26u1u1u3 fe80::200:5aee:feaa:20a1 fe80::10ec:ecff:fed0:c283
-enp0s26u1u1u4 fe80::200:5aee:feaa:20a2 fe80::b0bf:4bff:fe8f:1a97
+enp0s26u1u1u1 fe80::200:5aee:feaa:20a2 fe80::4c67:5fff:fe11:8b12
+enp0s26u1u1u3 fe80::200:5aee:feaa:20a1 fe80::c0f4:e6ff:fe38:896e
