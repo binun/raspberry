@@ -12,7 +12,7 @@ def outputs():
         yield stream
 
         connection.flush()
-        stream.seek(-6404096, io.SEEK_END)
+        stream.seek(0)
         connection.write(stream.read())
         stream.seek(0)
         stream.truncate()
@@ -20,12 +20,15 @@ def outputs():
 
 port=6666
 interface="%usb0"
+iso_=int(sys.argv[6])
 frmat=sys.argv[5]
 camera = picamera.PiCamera()
 width=int(sys.argv[3])
 height=int(sys.argv[4])
 camera.resolution = (width,height)
 camera.framerate = int(sys.argv[2])
+camera.sharpness=-100
+camera.iso=iso_
 pchost=sys.argv[1]
 stream=io.BytesIO()
 len=6404096

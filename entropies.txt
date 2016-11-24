@@ -490,3 +490,198 @@ Second 6541, Entropy 6.453837
 Second 6541, Entropy 
 Second 6136, Entropy 
 Second 961, Entropy 0.000000
+Second 7186, Entropy 6.453837
+Second 7186, Entropy 
+Second 7516, Entropy 
+Second 6811, Entropy 
+Second 5296, Entropy 
+Second 586, Entropy 0.000000
+Second 8431, Entropy 
+Second 4771, Entropy 
+Second 5041, Entropy 
+Second 6706, Entropy 
+Second 8041, Entropy 
+Second 5446, Entropy 
+Second 7816, Entropy 
+Second 6016, Entropy 
+Second 6556, Entropy 
+Second 6151, Entropy 
+Second 976, Entropy 0.000000
+Second 7201, Entropy 
+Second 7531, Entropy 
+Second 6826, Entropy 
+Second 5311, Entropy 
+Second 601, Entropy 0.000000
+Second 8446, Entropy 
+Second 4786, Entropy 
+Second 5056, Entropy 
+Second 6721, Entropy 
+Second 8056, Entropy 
+Second 5461, Entropy 
+Second 7831, Entropy 
+Second 6031, Entropy 
+Second 6571, Entropy 
+Second 6166, Entropy 
+Second 991, Entropy 0.000000
+Second 7216, Entropy 
+Second 7546, Entropy 
+Second 6841, Entropy 
+Second 5326, Entropy 
+Second 616, Entropy 0.000000
+Second 8461, Entropy 
+Second 4801, Entropy 
+Second 5071, Entropy 
+Second 6736, Entropy 
+Second 8071, Entropy 
+Second 5476, Entropy 
+Second 7846, Entropy 
+Second 6046, Entropy 
+Second 6586, Entropy 
+Second 6181, Entropy 
+Second 1006, Entropy 0.000000
+Second 7231, Entropy 
+Second 7561, Entropy 
+Second 6856, Entropy 
+Second 5341, Entropy 
+Second 631, Entropy 0.000000
+Second 8476, Entropy 
+Second 4816, Entropy 
+Second 5086, Entropy 
+Second 6751, Entropy 
+Second 8086, Entropy 
+Second 5491, Entropy 
+Second 7861, Entropy 
+Second 6061, Entropy 
+Second 6601, Entropy 
+Second 6196, Entropy 
+Second 1021, Entropy 0.000000
+Second 7246, Entropy 
+Second 7576, Entropy 
+Second 6871, Entropy 
+Second 5356, Entropy 
+Second 646, Entropy 0.000000
+Second 8491, Entropy 
+Second 4831, Entropy 
+Second 5101, Entropy 
+Second 6766, Entropy 
+Second 8101, Entropy 
+Second 5506, Entropy 
+Second 7876, Entropy 
+Second 6076, Entropy 
+Second 6616, Entropy 
+Second 6211, Entropy 
+Second 1036, Entropy 0.000000
+Second 7261, Entropy 
+Second 7591, Entropy 
+Second 6886, Entropy 
+Second 5371, Entropy 
+Second 661, Entropy 0.000000
+Second 8506, Entropy 
+Second 4846, Entropy 
+Second 5116, Entropy 
+Second 6781, Entropy 
+Second 8116, Entropy 
+Second 5521, Entropy 
+Second 7891, Entropy 
+Second 6091, Entropy 
+Second 6631, Entropy 
+Second 6226, Entropy 
+Second 1051, Entropy 0.000000
+Second 7276, Entropy 
+Second 7606, Entropy 
+Second 6901, Entropy 
+Second 5386, Entropy 
+Second 676, Entropy 0.000000
+Second 8521, Entropy 
+Second 4861, Entropy 
+Second 5131, Entropy 
+Second 6796, Entropy 
+Second 8131, Entropy 
+Second 5536, Entropy 
+Second 7906, Entropy 
+Second 6106, Entropy 
+Second 6646, Entropy 
+Second 6241, Entropy 
+Second 1066, Entropy 0.000000
+Second 7291, Entropy 
+Second 7621, Entropy 
+Second 6916, Entropy 
+Second 5401, Entropy 
+Second 691, Entropy 0.000000
+Second 8536, Entropy 
+Second 4876, Entropy 
+Second 5146, Entropy 
+Second 6811, Entropy 
+Second 8146, Entropy 
+Second 5551, Entropy 
+Second 7921, Entropy 
+Second 6121, Entropy 
+Second 6661, Entropy 
+Second 6256, Entropy 
+Second 1081, Entropy 0.000000
+Second 7306, Entropy 
+Second 7636, Entropy 
+Second 6931, Entropy 
+Second 5416, Entropy 
+Second 706, Entropy 0.000000
+Second 8551, Entropy 
+Second 4891, Entropy 
+Second 5161, Entropy 
+Second 6826, Entropy 
+Second 8161, Entropy 
+Second 5566, Entropy 
+Second 7936, Entropy 
+Second 6136, Entropy 
+Second 6676, Entropy 
+Second 6271, Entropy 
+Second 1096, Entropy 0.000000
+Second 7321, Entropy 
+Second 7651, Entropy 
+Second 6946, Entropy 
+Second 5431, Entropy 
+Second 721, Entropy 0.000000
+Second 8566, Entropy 
+Second 4906, Entropy 
+Second 5176, Entropy 
+Second 6841, Entropy 
+Second 8176, Entropy 
+Second 5581, Entropy 
+Second 7951, Entropy 
+Second 6151, Entropy 
+Second 6691, Entropy 
+Second 6286, Entropy 
+Second 1111, Entropy 0.000000
+Second 7336, Entropy 
+Second 7666, Entropy 
+Second 6961, Entropy 
+Second 5446, Entropy 
+Second 736, Entropy 0.000000
+Second 8581, Entropy 
+Second 4921, Entropy 
+Second 5191, Entropy 
+Second 6856, Entropy 
+Second 8191, Entropy 
+Second 5596, Entropy 
+Second 7966, Entropy 
+Second 6166, Entropy 
+Second 6706, Entropy 
+Second 6301, Entropy 
+Second 1126, Entropy 0.000000
+Second 7351, Entropy 
+Second 7681, Entropy 
+Second 6976, Entropy 
+Second 5461, Entropy 
+Second 751, Entropy 0.000000
+Second 8596, Entropy 
+Second 4936, Entropy 
+Second 5206, Entropy 
+Second 6871, Entropy 
+Second 8206, Entropy 
+Second 5611, Entropy 
+Second 7981, Entropy 
+Second 6181, Entropy 
+Second 6721, Entropy 
+Second 6316, Entropy 
+Second 1141, Entropy 0.000000
+Second 7366, Entropy 
+Second 7696, Entropy 
