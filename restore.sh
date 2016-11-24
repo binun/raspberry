@@ -8,3 +8,5 @@ sleep 1
 service network-manager stop
 sleep 1
 service network-manager start
+rm -f noise*.bin
+

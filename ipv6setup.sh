@@ -1,4 +1,4 @@
-
+\
 #/bin/bash -i
 
 DRY=0
@@ -14,14 +14,15 @@ DRY=0
 HEIGHT=640
 WIDTH=480
 MEASUREPERIOD=15
-MEASUREPORTION=40M
+MEASUREPORTION=60M
 
 FRAMERATE=30
+ISO=1200
 
 #FORMAT=3
 FORMAT=rgb
 
-PCIFACE=eno1
+PCIFACE=enp10s0
 RPIFACE=enp
 
 RPIS=rpientries.txt
@@ -54,13 +55,13 @@ ifconfig -a | sed 's/[ \t].*//;/^$/d' | grep -v 'avahi' | grep $RPIFACE | (while
 		myipv6=$(ip addr show dev $(cat id.txt) | grep 'link' | sed -e's/^.*inet6 \([^ ]*\)\/.*$/\1/;t;d')
 
 		printf "$id $rpi $myipv6\n"
-		printf "$id $rpi $myipv6\n" >> $RPIS
+		#printf "$id $rpi $myipv6\n" >> $RPIS
 		echo $rpi > rpi.txt
 		echo $myipv6 > myipv6.txt
 
 		echo "pi@$(cat rpi.txt)%$(cat id.txt)"
 		#gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt) './streamv4.sh $HEIGHT $WIDTH $FORMAT $(cat myipv6.txt) none 100 100 100 none; bash -i' "
-		gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt) './bayer.sh $(cat myipv6.txt) $FRAMERATE $HEIGHT $WIDTH $FORMAT; bash -i' "
+		gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt) './bayer.sh $(cat myipv6.txt) $FRAMERATE $HEIGHT $WIDTH $FORMAT $ISO; bash -i' "
 
 		#gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt)"
 
@@ -69,4 +70,4 @@ ifconfig -a | sed 's/[ \t].*//;/^$/d' | grep -v 'avahi' | grep $RPIFACE | (while
 	fi
 done)
 
-./measurequality.sh $MEASUREPERIOD $MEASUREPORTION &
+#./measurequality.sh $MEASUREPERIOD $MEASUREPORTION &
