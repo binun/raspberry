@@ -1,26 +1,25 @@
-\
-#/bin/bash -i
 
-DRY=0
+#/bin/bash -i
 
 #HEIGHT=2592
 #WIDTH=1944
 
 #HEIGHT=3280
 #WIDTH=2464
-#HEIGHT=1920
-#WIDTH=1080
+HEIGHT=1920
+WIDTH=1088
 
-HEIGHT=640
-WIDTH=480
+#HEIGHT=640
+#WIDTH=480
 MEASUREPERIOD=15
 MEASUREPORTION=60M
 
-FRAMERATE=30
+FRAMERATE=60
 ISO=1200
 
 #FORMAT=3
 FORMAT=rgb
+#FORMAT=h264
 
 PCIFACE=enp10s0
 RPIFACE=enp
@@ -46,7 +45,7 @@ ifconfig -a | sed 's/[ \t].*//;/^$/d' | grep -v 'avahi' | grep $RPIFACE | (while
 
 		ifconfig $id down
 		ifconfig $id $v4ip netmask 255.255.0.0 up
-		sleep 5
+		sleep 2
 
 		echo $id > id.txt
 
@@ -61,9 +60,9 @@ ifconfig -a | sed 's/[ \t].*//;/^$/d' | grep -v 'avahi' | grep $RPIFACE | (while
 
 		echo "pi@$(cat rpi.txt)%$(cat id.txt)"
 		#gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt) './streamv4.sh $HEIGHT $WIDTH $FORMAT $(cat myipv6.txt) none 100 100 100 none; bash -i' "
-		#gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt) './bayer.sh $(cat myipv6.txt) $FRAMERATE $HEIGHT $WIDTH $FORMAT $ISO; bash -i' "
+		gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt) './bayer.sh $(cat myipv6.txt) $FRAMERATE $HEIGHT $WIDTH $FORMAT $ISO; bash -i' "
 
-		gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt)"
+		#gnome-terminal -x bash -c "sshpass -p 'raspberry' ssh -t -o StrictHostKeyChecking=no pi@$(cat rpi.txt)%$(cat id.txt)"
 
 		i=$((i+1))
 		sleep 10
