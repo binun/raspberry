@@ -485,3 +485,18 @@ Second 3616, Entropy 5.366436
 Second 2806, Entropy 6.333346
 Second 796, Entropy 5.366436
 Second 2806, Entropy 5.366436
+Second 811, Entropy 
+Second 3211, Entropy 6.333346
+Second 3211, Entropy 
+Second 2821, Entropy 
+Second 1981, Entropy 6.333346
+Second 1981, Entropy 
+Second 3631, Entropy 6.333346
+Second 3631, Entropy 
+Second 826, Entropy 
+Second 3226, Entropy 
+Second 2836, Entropy 
+Second 1996, Entropy 
+Second 3646, Entropy 
+Second 841, Entropy 
+Second 3241, Entropy 

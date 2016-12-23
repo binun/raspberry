@@ -15,6 +15,7 @@
 #define BUFSIZE 8*1024*1024
 #define LOG "report.csv"
 #define FACTOR 4
+#define RECENT_TIME 2
 
 typedef unsigned char byte;
 typedef struct tagbufferFor {
@@ -104,28 +105,44 @@ void *connection_handler(void *connection)
            
         
 	int read_size;
-        FILE * f = fopen(conn->filename, "a+b");
-        for (;;) {
-	   read_size = recv(conn->socket, binbuffer, BUFSIZE, 0);
+	char noisename[64] = "";
+    char recnoisename[64] = "recent";
+
+    strcpy(noisename,conn->filename);
+    strcat(recnoisename,noisename);
+    
+    FILE * f = fopen(noisename, "a+b");
+    FILE * fr = fopen(recnoisename, "a+b");
+    
+    for (;;) {
+      read_size = recv(conn->socket, binbuffer, BUFSIZE, 0);
        
-	   if (read_size<=0) {
+	      if (read_size<=0) {
 
                 continue;
-	   }
+	      }
            
        pthread_mutex_lock(&noise_mutex);
+       
 	   fwrite(binbuffer, sizeof(byte), read_size, f);
+	   fwrite(binbuffer, sizeof(byte), read_size, fr);
            //printf("%d bytes were read\n", read_size);
+           
 	   fflush(f);
-           pthread_mutex_unlock(&noise_mutex);
+	   fflush(fr);
+       pthread_mutex_unlock(&noise_mutex);
 	   memset(binbuffer, 0, BUFSIZE);
-        }
+	   
+	   fclose(f);
+	   fclose(fr);
+    }
 
 	return 0;
 }
 
 void *timer_handler(void*arg)
 {
+  int period = 0;
   for (;;) {
         int i=0,fd=0;
         long diff=0;
@@ -138,8 +155,14 @@ void *timer_handler(void*arg)
           int noise;
           int size=0;
           char noiseName[64] = "";
+          char recent_noiseName[64] = "";
 
           sprintf(noiseName, "noise%d.bin", i + 1);
+          sprintf(recent_noiseName, "recentnoise%d.bin", i + 1);
+          
+          if (period % RECENT_TIME ==0) {
+             remove(recent_noiseName);
+		  }
           noise=open(noiseName,O_RDONLY);
           fstat(noise, &buf);
           close(noise);
@@ -148,10 +171,11 @@ void *timer_handler(void*arg)
           bufFiles[i].prevsize = buf.st_size;
         }
         
-  	pthread_mutex_unlock(&noise_mutex);
+  	    pthread_mutex_unlock(&noise_mutex);
         if (connectionNo>0)
             printf("\n");
-  	sleep(1);
+  	    sleep(1);
+        period++;
   }
 
 }
