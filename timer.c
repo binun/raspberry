@@ -1,0 +1,1 @@
+int licenseDuration=1;

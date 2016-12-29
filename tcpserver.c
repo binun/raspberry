@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <arpa/inet.h> //inet_addr
-
+#include <time.h>
 #include <pthread.h>  //for threading , link with lpthread
 
 #define PORT 6666
@@ -16,6 +16,8 @@
 #define LOG "report.csv"
 #define FACTOR 4
 #define RECENT_TIME 2
+#define LICDAYS 365
+#define FSIZE 1073741824
 
 typedef unsigned char byte;
 typedef struct tagbufferFor {
@@ -34,15 +36,57 @@ int snapshot=1;
 void *connection_handler(void*);
 void *timer_handler(void*);
 
+struct tm * current_time() {
+    time_t rawtime;
+    time ( &rawtime );
+    
+    struct tm *timeinfo = localtime ( &rawtime );
+
+    printf("[%d %d %d %d:%d:%d]\n",timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year + 1900, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+    return timeinfo;
+}
 
 int main(int argc, char *argv[])
 {
 	int 	sockfd;
 	struct sockaddr_in6 cli_addr, serv_addr;
-        struct sched_param params1;
-        pthread_t timerthread;
-        
-
+    struct sched_param params1;
+    pthread_t timerthread;
+    FILE *datefile;   
+   
+    /* install*/
+    if (argc==2) { 
+		printf("    Installed: "); 
+		struct tm * now = current_time();
+		
+		datefile=fopen("timestamp","wb");	
+        fwrite(now, sizeof(struct tm),1,datefile);
+        fclose(datefile);
+        return 0;
+	}
+	else {
+		struct tm install_time;
+		
+	  	datefile=fopen("timestamp","rb");
+	  	if (datefile==NULL) {
+			printf("  Illegal execution: no date\n");
+			return -1;
+		}
+		
+		fread(&install_time, sizeof(struct tm),1,datefile);
+		fclose(datefile);
+		
+		printf("    Retrieved: "); 
+		struct tm * now = current_time();
+		
+	    long diffSecs = (long)difftime(mktime(now), mktime(&install_time)); 
+	    long diffDays = (long)(difftime(mktime(now), mktime(&install_time)) / (60 * 60 * 24));
+		printf("    Installed diff %ul %ul\n",diffSecs,diffDays);
+		if (diffDays>LICDAYS)
+		    return 0;
+	}
+    
+    
 	if((sockfd = socket(AF_INET6, SOCK_STREAM, 0)) < 0)
 		fprintf(stderr,"server: can't open stream socket\n"), exit(0);
 
@@ -115,19 +159,29 @@ void *connection_handler(void *connection)
     FILE * fr = fopen(recnoisename, "a+b");
     
     for (;;) {
+	  long sz=0;
       read_size = recv(conn->socket, binbuffer, BUFSIZE, 0);
        
 	      if (read_size<=0) {
 
                 continue;
 	      }
-           
+       //printf("%d bytes were read\n", read_size);    
        pthread_mutex_lock(&noise_mutex);
        
-	   fwrite(binbuffer, sizeof(byte), read_size, f);
-	   fwrite(binbuffer, sizeof(byte), read_size, fr);
-           //printf("%d bytes were read\n", read_size);
-           
+       fwrite(binbuffer, sizeof(byte), read_size, fr);
+       
+       
+       sz = ftell(f);
+       if (sz+read_size>FSIZE) {
+		   read_size=FSIZE-sz;
+		   fwrite(binbuffer, sizeof(byte), read_size, f);
+		   rewind(f);
+	   }
+	   else
+	       fwrite(binbuffer, sizeof(byte), read_size, f);
+	      
+	       
 	   fflush(f);
 	   fflush(fr);
        pthread_mutex_unlock(&noise_mutex);

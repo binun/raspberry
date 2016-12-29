@@ -7,8 +7,7 @@ cp ./options/new/sysctl.conf /etc
 cp ./options/new/interfaces /etc/network
 
 rm -f tcpserver
-gcc tcpserver.c -o tcpserver -lpthread
- 
+gcc tcpserver.c timer.c -o tcpserver -lpthread 
 reboot
 
 
