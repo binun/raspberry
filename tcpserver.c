@@ -10,31 +10,48 @@
 #include <arpa/inet.h> //inet_addr
 #include <time.h>
 #include <pthread.h>  //for threading , link with lpthread
+#include <sys/un.h>
 
 #define PORT 6666
-#define BUFSIZE 8*1024*1024
+#define BUFSIZE 1024*1024
 #define LOG "report.csv"
 #define FACTOR 4
 #define RECENT_TIME 2
 #define LICDAYS 365
-#define FSIZE 1073741824
+#define SOCK_PATH "pipe"
+
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
+
+
 
 typedef unsigned char byte;
 typedef struct tagbufferFor {
 	char ip[64];
 	char filename[64];
-        int socket;
-        long prevsize;
+    int socket;
+    long prevsize;
 } bufferFor;
 
+byte pickedNoise[BUFSIZE]="";
+int clientHub=0;
+int serverHub=0;
+long curPipeSize=0;
+
 pthread_mutex_t noise_mutex;
+pthread_mutex_t client_mutex;
+
 bufferFor bufFiles[32];
 byte binbuffer[BUFSIZE];
 int connectionNo = 0;
 int snapshot=1;
 
+struct sockaddr_un server_addr;
+struct sockaddr_un client_addr;
+
 void *connection_handler(void*);
 void *timer_handler(void*);
+void *hub_handler(void*);
 
 struct tm * current_time() {
     time_t rawtime;
@@ -46,12 +63,78 @@ struct tm * current_time() {
     return timeinfo;
 }
 
+void initServer(void)
+{
+	int s, s2, t, len;
+    struct sockaddr_un local, remote;
+    pthread_t hubthread;
+
+    if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+        perror("socket");
+        exit(1);
+    }
+
+    local.sun_family = AF_UNIX;
+    strcpy(local.sun_path, SOCK_PATH);
+    unlink(local.sun_path);
+    len = strlen(local.sun_path) + sizeof(local.sun_family);
+    if (bind(s, (struct sockaddr *)&local, len) == -1) {
+        perror("bind");
+        exit(1);
+    }
+
+    if (listen(s, 5) == -1) {
+        perror("listen");
+        return;
+    }
+
+    printf("Waiting for a connection...\n");
+    t = sizeof(remote);
+    if ((s2 = accept(s, (struct sockaddr *)&remote, &t)) == -1) {
+        perror("accept");
+        return;
+	}
+     
+    serverHub=s2;
+    printf("Connected.\n");
+    
+    pthread_create(&hubthread, NULL, hub_handler, NULL);
+}
+
+void initClient(void)
+{
+	int s, t, len;
+    struct sockaddr_un remote;
+    if (clientHub>0)
+		return;
+
+    if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+        printf("socket failsed");
+        return;
+    }
+
+    printf("Trying to connect...\n");
+
+    remote.sun_family = AF_UNIX;
+    strcpy(remote.sun_path, SOCK_PATH);
+    len = strlen(remote.sun_path) + sizeof(remote.sun_family);
+    if (connect(s, (struct sockaddr *)&remote, len) == -1) {
+        printf("no connection");
+        return;
+    }
+
+    printf("Connected.\n");
+    clientHub=s;
+    //send(clientHub, noise, readsize, 0);
+}
+
 int main(int argc, char *argv[])
 {
 	int 	sockfd;
 	struct sockaddr_in6 cli_addr, serv_addr;
     struct sched_param params1;
     pthread_t timerthread;
+     pthread_t hubthread;
     FILE *datefile;   
    
     /* install*/
@@ -93,16 +176,23 @@ int main(int argc, char *argv[])
 	memset((char *) &serv_addr, 0, sizeof(serv_addr));
 
 	serv_addr.sin6_flowinfo = 0;
-        serv_addr.sin6_family = AF_INET6;
-        serv_addr.sin6_addr = in6addr_any;
-        serv_addr.sin6_port = htons(PORT);
+    serv_addr.sin6_family = AF_INET6;
+    serv_addr.sin6_addr = in6addr_any;
+    serv_addr.sin6_port = htons(PORT);
    
-        if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
            fprintf(stderr,"server: can't bind local address\n"), exit(0);
 
 	pthread_create(&timerthread, NULL, timer_handler, NULL);
-        params1.sched_priority = sched_get_priority_min(SCHED_FIFO);
-        pthread_setschedparam(timerthread, SCHED_FIFO, &params1); 
+    params1.sched_priority = sched_get_priority_min(SCHED_FIFO);
+    pthread_setschedparam(timerthread, SCHED_FIFO, &params1); 
+    //initServer();
+    pthread_create(&hubthread, NULL, hub_handler, NULL);
+    initClient();
+    for (;;) {
+		send(clientHub, "message", strlen("message"), 0);
+		sleep(1);
+	}
 
 	listen(sockfd, 5);
 
@@ -115,19 +205,21 @@ int main(int argc, char *argv[])
             int clilen = sizeof(cli_addr);
             char bufFilename[64] = "";
             char theirIP[100]="";
+            
+            initClient();
 
-	    int client_sock = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-	    if(client_sock < 0)
-	     fprintf(stderr,"server: accept error\n"), exit(0);
+	        int client_sock = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+	        if(client_sock < 0)
+	        fprintf(stderr,"server: accept error\n"), exit(0);
             
             inet_ntop(AF_INET6, &(cli_addr.sin6_addr),theirIP, 100);
             printf("Incoming connection from client having IPv6 address: %s\n",theirIP);
 	    
-	    sprintf(bufFilename, "noise%d.bin", connectionNo + 1);
-	    strcpy(bufFiles[connectionNo].ip, theirIP);
-	    strcpy(bufFiles[connectionNo].filename, bufFilename);
-	    bufFiles[connectionNo].socket = client_sock;
-	    printf("Stream from IP %s will be directed to %s\n", bufFiles[connectionNo].ip, bufFiles[connectionNo].filename);
+	        sprintf(bufFilename, "noise%d.bin", connectionNo + 1);
+	        strcpy(bufFiles[connectionNo].ip, theirIP);
+	        strcpy(bufFiles[connectionNo].filename, bufFilename);
+	        bufFiles[connectionNo].socket = client_sock;
+	        printf("Stream from IP %s will be directed to %s\n", bufFiles[connectionNo].ip, bufFiles[connectionNo].filename);
  
             pthread_create(&rpithread, NULL, connection_handler, (void*)(bufFiles+connectionNo));
             params.sched_priority = sched_get_priority_max(SCHED_FIFO);
@@ -142,6 +234,58 @@ int main(int argc, char *argv[])
 /*
 * This will handle connection for each client
 * */
+
+void *hub_handler(void *connection)
+{
+	int s, s2, t, len;
+    struct sockaddr_un local, remote;
+    pthread_t hubthread;
+
+    if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+        perror("socket");
+        exit(1);
+    }
+
+    local.sun_family = AF_UNIX;
+    strcpy(local.sun_path, SOCK_PATH);
+    unlink(local.sun_path);
+    len = strlen(local.sun_path) + sizeof(local.sun_family);
+    if (bind(s, (struct sockaddr *)&local, len) == -1) {
+        perror("bind");
+        exit(1);
+    }
+
+    if (listen(s, 5) == -1) {
+        perror("listen");
+        return;
+    }
+
+    printf("Waiting for a connection...\n");
+    t = sizeof(remote);
+    if ((s2 = accept(s, (struct sockaddr *)&remote, &t)) == -1) {
+        perror("accept");
+        return;
+	}
+     
+    serverHub=s2;
+    printf("Connected.\n");
+    for (;;)
+     {
+    	memset(pickedNoise, 0, BUFSIZE);
+        int n = recv(serverHub, pickedNoise, BUFSIZE, 0);
+        
+        pthread_mutex_lock(&client_mutex);
+        int decrease = MIN(n,curPipeSize);
+        curPipeSize-=decrease;
+		
+  	    pthread_mutex_unlock(&client_mutex);
+        
+        printf("Received %d bytes noise\n",n);
+     } 	
+     
+   close(serverHub);
+}
+
 void *connection_handler(void *connection)
 {
         
@@ -151,6 +295,7 @@ void *connection_handler(void *connection)
 	int read_size;
 	char noisename[64] = "";
     char recnoisename[64] = "recent";
+    long fpos = 0;
 
     strcpy(noisename,conn->filename);
     strcat(recnoisename,noisename);
@@ -162,29 +307,44 @@ void *connection_handler(void *connection)
 	  long sz=0;
       read_size = recv(conn->socket, binbuffer, BUFSIZE, 0);
        
-	      if (read_size<=0) {
+	  if (read_size<=0) {
 
-                continue;
-	      }
+           continue;
+	  }
+	      
+	   pthread_mutex_lock(&client_mutex);
+	   
+       if (curPipeSize >=BUFSIZE)
+         pthread_mutex_unlock(&client_mutex);
+       else {
+		   int diff = MIN(read_size, BUFSIZE-curPipeSize);
+	       curPipeSize+=diff;
+		   pthread_mutex_unlock(&client_mutex);
+		   send(clientHub, binbuffer, diff, 0);
+	   }
+       
+  	   
        //printf("%d bytes were read\n", read_size);    
        pthread_mutex_lock(&noise_mutex);
        
-       fwrite(binbuffer, sizeof(byte), read_size, fr);
-       
-       
-       sz = ftell(f);
-       if (sz+read_size>FSIZE) {
-		   read_size=FSIZE-sz;
+       /*if (fpos+read_size>BUFSIZE) {
+		   read_size=BUFSIZE-fpos;
 		   fwrite(binbuffer, sizeof(byte), read_size, f);
-		   rewind(f);
+		   fseek(f, 0, SEEK_SET );
+		   fpos=0;
 	   }
-	   else
-	       fwrite(binbuffer, sizeof(byte), read_size, f);
-	      
+	   else {       
+           fwrite(binbuffer, sizeof(byte), read_size, f);
+           fpos = fpos + read_size;
+	   }*/
+	   
+	   fwrite(binbuffer, sizeof(byte), read_size, f);
+	   fwrite(binbuffer, sizeof(byte), read_size, fr);
+	   pthread_mutex_unlock(&noise_mutex);
 	       
 	   fflush(f);
 	   fflush(fr);
-       pthread_mutex_unlock(&noise_mutex);
+       
 	   memset(binbuffer, 0, BUFSIZE);
 	   
 	   fclose(f);
