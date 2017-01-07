@@ -139,9 +139,6 @@ void *connection_handler(void *socket_desc)
         printf("Respond  1 to client %d\n", sock);
         memset(server_reply,0,CLIENTBUF);
         
-        //pthread_mutex_lock(&noise_mutex);
-        
-        //strcpy(noisefile,NOISEFILE);
         sprintf(noisefile,CHAIN,chain);
         fnoise = fopen(noisefile, "rb"); 
         printf(noisefile); 
@@ -151,73 +148,40 @@ void *connection_handler(void *socket_desc)
         
         flock(fileno(fnoise), LOCK_EX);
         fseek(fnoise, 0L, SEEK_END);
-        fsize = ftell(fnoise);
         printf("Respond  3 to client %d\n", sock);
         
-        if (fsize-fptr > CLIENTBUF) 
+        int remainder1 = MIN(CLIENTBUF, ftell(fnoise)- fptr);
+        if (remainder1 > 0)
         {
-		  fread(server_reply,1,CLIENTBUF,fnoise);
-          fptr = fptr + CLIENTBUF;
-          flock(fileno(fnoise), LOCK_UN);
-          printf("Working through the primary chain %d \n", chain); 
-          fclose(fnoise);
-		}
-		else {
-		  int remainder1 = fsize-fptr;
-		  int remainder2 = CLIENTBUF - remainder1;
+			fread(server_reply,1,remainder1,fnoise);
+			printf("Working through the primary chain %d \n", remainder1);
+		}	
+        flock(fileno(fnoise), LOCK_UN);
+        fclose(fnoise);
+        
+        int remainder2 = CLIENTBUF - remainder1;
+        
+		if (remainder2>0) {
+		
 		  FILE *fnext = NULL;	
 		  char rmcommand[64] = "";	
 		  char nextchain[64] = "";
-		  fread(server_reply, sizeof(unsigned char), remainder1, fnoise);
 		  
 		  chain++;
 		  sprintf(nextchain,CHAIN,chain);
 		  fnext = fopen(nextchain,"rb");
-		  if (fnext!=NULL) {
-		    flock(fileno(fnext),LOCK_EX);
-		    fread(server_reply+remainder1, sizeof(unsigned char), remainder2, fnoise);
-		  
-		    flock(fileno(fnext),LOCK_UN);
-		    fclose(fnext);
-	       }
-	      fptr = fptr + remainder1+remainder2;flock(fileno(fnoise), LOCK_UN);
-          fclose(fnoise);
-          sprintf(rmcommand,"rm -f noise%d.bin", chain-1); 
+		  if (fnext==NULL) continue;
+		  flock(fileno(fnext),LOCK_EX);
+		  fread(server_reply+remainder1, sizeof(unsigned char), remainder2, fnoise);
+		  flock(fileno(fnext),LOCK_UN);
+		  fclose(fnext);
+		  sprintf(rmcommand,"rm -f noise%d.bin", chain-1); 
           printf("Removing %s\n", rmcommand); 
           system(rmcommand);
-          //remove(noisefile);
-		}
-		
-        /*fptr = fptr + send_size;
-        send_size = MIN(fsize-fptr,CLIENTBUF);
-        fseek(fnoise,fptr,SEEK_SET);
-        printf("Noisesize %ld sendsize %d curoffset %ld\n", fsize,send_size,fptr);
-        if (send_size>=MIN_REPLY) 
-        {      
-          fread(server_reply,1,send_size,fnoise);
-          fptr = fptr + send_size;
-          write(sock ,server_reply , send_size);
-	    }
-	    
-	    flock(fileno(fnoise), LOCK_UN);
-        fclose(fnoise);
-          
-        if (fsize > (long)(MAXFILESIZE*CLEAN_FACTOR)) {
-			long bottom_line = (long)(fptr / MBYTE) - 1;
-			char command[128] = "";
-			
-			sprintf(command, "dd if=%s of=chunk ibs=1M obs=1M skip=%ld status=none;mv chunk %s; rm -f chunk", NOISEFILE, bottom_line,NOISEFILE);
-	        printf("Cutting file %s\n", command);
-	        system(command);  
-		}
-		*/
-		
-		
-		//pthread_mutex_unlock(&noise_mutex);
-		
-	}
-    //Free the socket pointer
-    free(socket_desc);
-     
+	   }
+	   
+	   fptr = fptr + remainder1+remainder2;
+       write(sock ,server_reply , remainder1+remainder2);  
+    }
     return 0;
 }
