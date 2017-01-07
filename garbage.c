@@ -3,6 +3,31 @@ int numPipes=0;
 long curPipeSize=0;
 pipeDef pipes[32];
 
+ ftstamp = fopen(TSTAMP,"rb");
+        if (ftstamp==NULL)
+           fptr=0;
+        else {     
+          fread((void*)&fptr,sizeof(long),1,ftstamp);
+          fclose(ftstamp);
+	    }
+        
+        
+        //pthread_mutex_lock(&noise_mutex);
+        fnoise = fopen(NOISEFILE, "rb");
+        
+        fseek(fnoise, 0L, SEEK_END);
+        fsize = ftell(fnoise);
+        
+        send_size = MIN(fsize-fptr,CLIENTBUF);
+        fseek(fnoise,fptr,SEEK_SET);
+        printf("Noisesize %ld sendsize %ld curoffset %ld\n", fsize,send_size,fptr);
+        fread(server_reply,1,send_size,fnoise);
+        fptr = MAX(fptr + send_size,fsize);
+        fclose(fnoise);
+        
+        ftstamp = fopen(TSTAMP,"wb");
+        fwrite((void*)&fptr,sizeof(long),1,ftstamp); 
+        fclose(ftstamp);
 
 typedef struct tagUnixPipe {
 	int socket;
@@ -157,3 +182,39 @@ typedef struct tagUnixPipe {
 	   printf("%d sent %d bytes loop %d\n",i, sent,loop);
 	   }
    }
+   
+   /*void *split_handler(void *connection)
+{    
+  int i=0;
+  FILE *ftstamp= NULL,*fnoise = NULL;
+  for (;;) {
+           
+        long fsize = 0,fptr=0;
+        long bottom_line = 0;
+        pthread_mutex_lock(&noise_mutex);
+        for (i=0; i < connectionNo+1; i++) 
+        {		       
+          char noiseName[64] = "";
+          char recent_noiseName[64] = "";
+          
+          if (i<connectionNo)
+            sprintf(noiseName, "noise%d.bin", i + 1);
+          else
+            strcpy(noiseName, "noise.bin");
+          
+		  fnoise = fopen(NOISEFILE, "rb");
+        
+          fseek(fnoise, 0L, SEEK_END);
+          fsize = ftell(fnoise);
+          fclose(fnoise);
+          
+          bottom_line = MIN(fptr,(long)(MAXFILESIZE / DISCARD_RATIO));
+          bottom_line = (long)(bottom_line / 1048576);
+          printf(command, "dd if=%s of=chunk ibs=1M obs=1M skip=%ld status=none && mv chunk %s", noiseName, bottom_line,noiseName);
+	      system(command); 
+        }
+             
+  	    pthread_mutex_unlock(&noise_mutex);
+  }
+}*/
+
