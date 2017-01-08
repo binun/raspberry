@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 	
 	
     if (SIMULATION) {
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < 2; i++) {
 		   pthread_t simthread;
            int *new_i = malloc(1);
            *new_i = i;
@@ -273,7 +273,7 @@ void *simulation_handler(void *socket_desc)
 	   
 	   if (remainder1>0) {
 		  fwrite(binbuffer, sizeof(byte), read_size, fnoise);
-		  printf("Written %d in %s\n", remainder2,noisename);
+		  //printf("Written %d in %s\n", remainder1,noisename);
 	  }
 	   
 	   flock(fileno(fnoise), LOCK_UN);
@@ -289,7 +289,7 @@ void *simulation_handler(void *socket_desc)
 		   fwrite(binbuffer+remainder1, sizeof(byte), remainder2, fnext);
 		   flock(fileno(fnext),LOCK_UN);
 		   fclose(fnext);
-		   printf("Written %d in %s\n", remainder2,nextchain);
+		   //printf("Remainder %d in %s\n", remainder2,nextchain);
 	   }
 			
 	   usleep(33333);     

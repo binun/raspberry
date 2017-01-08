@@ -12,7 +12,7 @@
 char server_reply[CLIENTBUF]="";
 pthread_mutex_t noise_mutex;
 long fptr=0L;
-int chain=0;
+int chain=1;
  
 //the thread function
 void *connection_handler(void *);
@@ -136,12 +136,13 @@ void *connection_handler(void *socket_desc)
            continue;
          }
         
-        printf("Respond  1 to client %d\n", sock);
+        printf("Respond  1 to client %d ", sock);
         memset(server_reply,0,CLIENTBUF);
         
         sprintf(noisefile,CHAIN,chain);
         fnoise = fopen(noisefile, "rb"); 
-        printf(noisefile); 
+        printf("%s\n",noisefile); 
+        
         if (fnoise==NULL) continue;  
         
         printf("Respond  2 to client %d\n", sock);
@@ -154,33 +155,45 @@ void *connection_handler(void *socket_desc)
         if (remainder1 > 0)
         {
 			fread(server_reply,1,remainder1,fnoise);
-			printf("Working through the primary chain %d \n", remainder1);
+			printf("In the primary chain %d \n", remainder1);
 		}	
         flock(fileno(fnoise), LOCK_UN);
         fclose(fnoise);
+        fptr = fptr + remainder1;
         
         int remainder2 = CLIENTBUF - remainder1;
         
-		if (remainder2>0) {
+		if (remainder2>=0) {
 		
 		  FILE *fnext = NULL;	
 		  char rmcommand[64] = "";	
 		  char nextchain[64] = "";
 		  
-		  chain++;
-		  sprintf(nextchain,CHAIN,chain);
+		  sprintf(nextchain,CHAIN,chain+1);
+		  printf("In the SECONDARY chain %d %s\n", remainder2,nextchain);
 		  fnext = fopen(nextchain,"rb");
-		  if (fnext==NULL) continue;
+		  if (fnext==NULL) {
+			    printf("Cannot \n");
+			    continue; 
+		  }
+		  printf("Lock %s fptr %d\n", nextchain,fptr);
 		  flock(fileno(fnext),LOCK_EX);
-		  fread(server_reply+remainder1, sizeof(unsigned char), remainder2, fnoise);
+		  int rs = MIN(remainder2, ftell(fnext) - fptr);
+		  printf("Prep %d \n", rs);
+		  if (remainder2>0)
+		     fread(server_reply+remainder1, sizeof(unsigned char), MIN(remainder2, ftell(fnext) - fptr), fnext);
 		  flock(fileno(fnext),LOCK_UN);
 		  fclose(fnext);
-		  sprintf(rmcommand,"rm -f noise%d.bin", chain-1); 
-          printf("Removing %s\n", rmcommand); 
+		  sprintf(rmcommand,"rm -f noise%d.bin", chain); 
+          printf("Removing %s\n", rmcommand);
+          
           system(rmcommand);
+          chain++;
+          fptr = remainder2;
+          printf("Changed chain %d \n", chain);
+          
 	   }
-	   
-	   fptr = fptr + remainder1+remainder2;
+	  
        write(sock ,server_reply , remainder1+remainder2);  
     }
     return 0;
