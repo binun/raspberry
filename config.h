@@ -5,7 +5,7 @@
 #define NOISEFILE "noise.bin"
 #define CHAIN "noise%d.bin"
 #define TSTAMP "tstamp.bin"
-#define CLIENTBUF 1024*100
+#define CLIENTBUF 1024*10
 #define MBYTE 1048576
 #define ASK "ask"
 #define RECENT_NOISE_TIME 2
@@ -14,8 +14,9 @@
 #define SIMULATION 1
 #define RPIBUFFER 1048576
 #define MIN_REPLY 512
+
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
-#define MAXFILESIZE 100*MBYTE 
+#define MAXFILESIZE 10*MBYTE 
 //1073741824

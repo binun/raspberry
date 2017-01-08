@@ -65,6 +65,8 @@ int main(int argc , char *argv[])
           printf("%d bytes obtained \n", n); 
          
          memset(server_reply,0,CLIENTBUF);
+         
+         //usleep(30000);
     }
      
     close(sock);
