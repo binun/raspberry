@@ -52,17 +52,16 @@ int main(int argc , char *argv[])
     {      
 		char message[10] = ASK;
         
-        //sendto(sock , message, strlen(message) , 0,(struct sockaddr *)&server,addr_size);
-        send(sock , message, strlen(message) , 0);
+        //send(sock , message, strlen(message) , 0);
         memset(server_reply,0,CLIENTBUF);
-        //Receive a reply from the server
+        
         //int n = recvfrom(sock , server_reply , CLIENTBUF , 0,(struct sockaddr *) &server, &addr_size);
         int n = recv(sock , server_reply , CLIENTBUF , 0);
         if( n <= 0)
             printf("recv failed\n");
         
         else
-          printf("%d bytes obtained \n", n); 
+          //printf("%d bytes obtained \n", n); 
          
          memset(server_reply,0,CLIENTBUF);
          

@@ -12,17 +12,21 @@
 
 char server_reply[CLIENTBUF]="";
 pthread_mutex_t lock;
-int fptr=0L;
-int chain=1;
+long fpos=0L;
+//long MAXFILESIZE = 1073741824;
+long MAXFILESIZE = 5368709120;
 
 struct flock lck;
  
-//the thread function
-void *connection_handler(void *);
+long MIN(long x, long y)
+{
+	if (x > y) return x;
+	else return y;
+} 
  
 int main(int argc , char *argv[])
 {
-    int sock,client_sock;
+    int sock;
     struct sockaddr_in me, client;
     int addr_size = sizeof(client);
     int send_size;
@@ -49,114 +53,36 @@ int main(int argc , char *argv[])
         printf("bind failed. Error");
         return 1;
     }
-    __sync_fetch_and_and(&fptr, 0);   
+    fpos=0;   
     listen(sock , 3);
     
     puts("NOISE Delivery Waiting \n");
-    while( (client_sock = accept(sock, (struct sockaddr *)&client, (socklen_t*)&addr_size)) )
-    {
-        printf("NOISE Client accepted\n");
-         
-        pthread_t sniffer_thread;
-        int *new_sock = malloc(1);
-        *new_sock = client_sock;
-         
-        if( pthread_create( &sniffer_thread , NULL ,  connection_handler , (void*) new_sock) < 0)
-        {
-            printf("could not create thread\n");
-            return 1;
-        }
-    }
-     
-    if (client_sock < 0)
-    {
-        printf("accept failed\n");
+    int client_sock = accept(sock, (struct sockaddr *)&client, (socklen_t*)&addr_size);
+    if (client_sock<0) {
+		printf("could not create thread\n");
         return 1;
-    }
+	}
+	
+    printf("NOISE Client accepted\n");
      
-    return 0;
-}
- 
-
- 
-void *connection_handler(void *socket_desc)
-{
-    int sock = *(int*)socket_desc;
-    int send_size;
-    int noise;
-    int phase=0;
-    char noisefile[64] = "";
-    sprintf(noisefile,CHAIN,chain);
-    while (1) 
+    while( 1 )
     {
-		char client_message[10] = "";
-		char command[64] = "";
-		//printf("Respond phase %s", noisefile);
-		int read_size = recv(sock , client_message , 10 , 0);
-		if(read_size <= 0)
-         {
-           continue;
-         }
-        
-        
-        memset(server_reply,0,CLIENTBUF);
-        
-        noise=-1;
-        while (1) {
-			printf("Opening %s\n",noisefile); 
-            noise = open(noisefile, O_RDONLY, 0666);
-            if (noise > 0) break;
+       memset(server_reply,0,CLIENTBUF);
+       
+       FILE *fnoise = fopen(NOISEFILE, "rb");
+	         
+       fseek(fnoise,fpos, SEEK_SET);
+       
+       int remainder = fread(server_reply, sizeof(unsigned char), CLIENTBUF, fnoise);
+       fpos = fpos + remainder;
+       if (fpos>=MAXFILESIZE || remainder<=0) 
+         fpos=0;
          
-            usleep(10000);
-	    }
-        printf("Opened %s on %d\n",noisefile,fptr); 
-        //if (noise<0) { printf("Opening %s\n", noisefile); continue; }
-        //else  
-        //
-        pthread_mutex_lock(&lock);
-        
-        
-        
-        //printf("Respond  2 to client %d\n", sock);
-        
-        //lck.l_start = fptr;
-        //lck.l_whence = SEEK_SET;
-        //lck.l_len = CLIENTBUF;
-        //lck.l_type = F_RDLCK;
-        //fcntl (noise, F_SETLKW, &lck);
-    
-        //printf("Respond to client %d\n", sock);
-        int fsize = (int)(lseek(noise, (size_t)0, SEEK_END)+1);
-        int remainder = MIN(CLIENTBUF, fsize - fptr);
-        if (remainder > 0)
-        {
-			read(noise,server_reply,remainder);
-			//printf("In the primary chain %d \n", remainder);
-		}	
-		
-        //lck.l_type = F_UNLCK;
-        //fcntl (noise, F_SETLKW, &lck);
-        
-        close(noise);
-        
-        fptr = fptr + remainder;    
-		if (CLIENTBUF - remainder>0) {
-		  char rmcommand[64] = "";
-		  
-		  fptr=0;
-		  sprintf(rmcommand,"rm -f noise%d.bin", chain); 
-          printf("Removing %s\n", rmcommand);
-          chain++;
-          //system(rmcommand);
-          
-          memset(noisefile,0,64);
-          sprintf(noisefile,CHAIN,chain);
-          printf("Changed chain %d to %s\n", chain,noisefile);
-          
-	   }
-	   
-	  pthread_mutex_unlock(&lock);
-      write(sock ,server_reply , remainder);   
+       //printf("             REPLY %d at %ld\n",remainder,fpos);  
+       fclose(fnoise);
+       write(client_sock ,server_reply , remainder); 
+       usleep(10000);
     }
+            
     return 0;
 }

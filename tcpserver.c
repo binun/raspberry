@@ -26,11 +26,10 @@ typedef struct tagbufferFor {
 	char filename[64];
     int socket;
     int size;
+    int ordNo;
 } bufferFor;
 
-
-struct flock lck;
-
+pthread_mutex_t noise_mutex;
 bufferFor bufFiles[32];
 byte binbuffer[RPIBUFFER];
 int connectionNo = 0;
@@ -38,6 +37,10 @@ int snapshot=1;
 int sockmode = SOCK_STREAM;
 int addresslen;
 int chain=1;
+long fpos=0;
+long MAXFILESIZE = 5368709120;
+                 
+//long MAXFILESIZE = 1073741824;
 
 void *connection_handler(void*);
 void *timer_handler(void*);
@@ -52,6 +55,12 @@ struct tm * current_time() {
 
     printf("[%d %d %d %d:%d:%d]\n",timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year + 1900, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
     return timeinfo;
+}
+
+long MIN(long x, long y)
+{
+	if (x > y) return x;
+	else return y;
 }
 
 int main(int argc, char *argv[])
@@ -100,14 +109,17 @@ int main(int argc, char *argv[])
 	
 	
     if (SIMULATION) {
-		for (int i = 0; i < 1; i++) {
+		connectionNo = 4;
+		for (int i = 0; i < connectionNo; i++) 
+		{
 		   pthread_t simthread;
            int *new_i = malloc(1);
            *new_i = i;
            pthread_create(&simthread, NULL, simulation_handler, (void*)(new_i));
-	   }
-	   while (1) {}
-	   return 0;
+	    }
+	    pthread_create(&timerthread, NULL, timer_handler, NULL);
+	    while (1) {}
+	    return 0;
 	
 	}
     
@@ -150,6 +162,7 @@ int main(int argc, char *argv[])
 	        strcpy(bufFiles[connectionNo].filename, bufFilename);
 	        bufFiles[connectionNo].socket = client_sock;
 	        bufFiles[connectionNo].size = 0;
+	        bufFiles[connectionNo].ordNo = connectionNo;
 	        printf("Stream from IP %s will be directed to %s\n", bufFiles[connectionNo].ip, bufFiles[connectionNo].filename);
  
             pthread_create(&rpithread, NULL, connection_handler, (void*)(bufFiles+connectionNo));
@@ -165,148 +178,87 @@ int main(int argc, char *argv[])
 void *connection_handler(void *connection)
 {
         
-	/*bufferFor * conn = (bufferFor*)connection;
+	bufferFor * conn = (bufferFor*)connection;
+	int i = conn->ordNo;
            
-        
-	int read_size;
-	char noisename[64] = "";
-    char recnoisename[64] = "recent";
+	char recnoisename[64] = "";
+    sprintf(recnoisename,"recentnoise%d.bin",i);
     
-    long fpos = 0;
-    
-    char jointnoisename[64] = NOISEFILE;
-    strcpy(noisename,conn->filename);
-    strcat(recnoisename,noisename);
-    
-    FILE * fnoise =NULL;
-    FILE * frecent = NULL;
-    FILE * fjoint = NULL;
-    
-    for (;;) {
-	  long sz=0;
-      read_size = recv(conn->socket, binbuffer, RPIBUFFER, 0);
+    for (;;) 
+    {
+      int read_size = recv(conn->socket, binbuffer, RPIBUFFER, 0);
        
 	  if (read_size<=0) {
 
            continue;
 	  }
 	   
+	   FILE *frecent = fopen(recnoisename, "a+b");
+       fwrite(binbuffer, sizeof(byte), read_size, frecent);
+       fclose(frecent);
+       
 	   pthread_mutex_lock(&noise_mutex);
 	   
-	   fnoise = fopen(noisename, "a+b");
-       frecent = fopen(recnoisename, "a+b");
-       fjoint = fopen(jointnoisename, "a+b");
+	   FILE *fnoise = fopen(NOISEFILE, "r+b");
+	   fseek(fnoise,fpos,SEEK_SET);      
        
-       flock(fileno(fnoise), LOCK_EX);
-       flock(fileno(frecent), LOCK_EX);
-       flock(fileno(fjoint), LOCK_EX);
-       
-       fseek(fnoise,0L,SEEK_END);
-       fseek(frecent,0L,SEEK_END);
-       fseek(fjoint,0L,SEEK_END);
-       
-       fwrite(binbuffer, sizeof(byte), read_size, frecent);
-       
-       if (ftell(fnoise) < MAXFILESIZE)
-	      fwrite(binbuffer, sizeof(byte), read_size, fnoise);
-	   
-	   //if (ftell(fjoint) < MAXFILESIZE)
-	      //fwrite(binbuffer, sizeof(byte), read_size, fjoint);
-	      
-	   if (read_size < MAXFILESIZE-ftell(fjoint))
-			fwrite(binbuffer, sizeof(byte), read_size, fjoint);
-	    else {
-			int remainder1 = MAXFILESIZE-ftell(fjoint);
-			int remainder2 = read_size-remainder1;
-			FILE *fnext = NULL;
-			
-			char nextchain[64] = "";
-			fwrite(binbuffer, sizeof(byte), remainder1, fjoint);
-			chain++;
-			sprintf(nextchain,CHAIN,chain);
-			fnext = fopen(nextchain,"a+b");
-			flock(fileno(fnext),LOCK_EX);
-			fwrite(binbuffer+remainder1, sizeof(byte), remainder2, fnext);
-			flock(fileno(fnext),LOCK_UN);
-			fclose(fnext);
-		}
-	   
-	   fflush(fnoise);
-	   fflush(frecent);
-	   fflush(fjoint);
-	   
-	   pthread_mutex_unlock(&noise_mutex);
-	        
+       int remainder = read_size;
+       if (MAXFILESIZE - fpos < read_size)
+		 remainder = (int)(MAXFILESIZE - fpos+1);
+		 
+       fwrite(binbuffer, sizeof(byte), remainder, fnoise);
+       //printf("% d writing %d bytes at %ld\n",i, remainder ,fpos);
+       fpos = fpos + remainder;
+       if (fpos>=MAXFILESIZE || remainder==0)
+	     fpos=0;
+        
+       fclose(fnoise);
+       pthread_mutex_unlock(&noise_mutex);
+              
 	   memset(binbuffer, 0, RPIBUFFER);
-	   
-	   flock(fileno(fnoise), LOCK_UN);
-       flock(fileno(frecent), LOCK_UN);
-       flock(fileno(fjoint), LOCK_UN);
-	   
-	   fclose(fnoise);
-	   fclose(frecent);
-	   fclose(fjoint);
+	   __sync_fetch_and_add (&(bufFiles[i].size),read_size);
     }
 
-	return 0;*/
+	return 0;
 }
 
 void *simulation_handler(void *socket_desc)
 {
     int i = *(int*)socket_desc;
-    
-    for (;;) {
+    char recnoisename[64] = "";
+    sprintf(recnoisename,"recentnoise%d.bin",i);
+    for (;;) 
+    {
 	
 	   int read_size = RPIBUFFER;
-     
-	   char noisename[64] = "";
-	   sprintf(noisename,CHAIN,chain);
-	   int noise=-1;
 	   
-	   noise = open(noisename, O_RDWR | O_SYNC | O_APPEND, 0777); 
-	   if (noise<=0)
-	      noise = open(noisename, O_RDWR | O_CREAT | O_SYNC | O_APPEND, 0777); 
-	   
-       //lck.l_whence = SEEK_END;
-       //lck.l_start = -CLIENTBUF;
-       //lck.l_len = CLIENTBUF;
-       //lck.l_type = F_WRLCK;
-       //fcntl (noise, F_SETLKW, &lck);
+       FILE *frecent = fopen(recnoisename, "a+b");
+       fwrite(binbuffer, sizeof(byte), read_size, frecent);
+       fclose(frecent);
        
-	   int fpos = lseek(noise, (size_t)0, SEEK_END)+1; 
-	   int remainder1 = MIN(read_size, MAXFILESIZE-fpos); 
-	   if (remainder1>0) {
-		  write(noise,binbuffer, sizeof(byte)*remainder1);  
-		  //printf("Written %d in %s\n", remainder1,noisename);
-	  }
-	 
-	  //lck.l_type = F_UNLCK;
-      //fcntl (noise, F_SETLKW, &lck);
-      
-      close(noise);
-        
-	  int remainder2 = read_size - remainder1;
-	  if (remainder2 > 0) {
-	     
+	   pthread_mutex_lock(&noise_mutex);
 	   
-	    chain++;
-	    /*char nextname[64] = "";
-	    sprintf(nextname,CHAIN,chain);
-	    int next = open(nextname,O_RDWR | O_CREAT | O_SYNC | O_APPEND);
-	    fcntl (next, F_SETLKW, &lck);
-	  
-	    write(next,binbuffer+remainder1, sizeof(byte)*remainder2);
-        lck.l_type = F_UNLCK;
-        fcntl (next, F_SETLKW, &lck);
-        usleep (1);
-        close(next);*/
+	   FILE *fnoise = fopen(NOISEFILE, "r+b");
+	   fseek(fnoise,fpos,SEEK_SET);      
+       
+       int remainder = read_size;
+       if (MAXFILESIZE - fpos < read_size)
+		 remainder = (int)(MAXFILESIZE - fpos+1);
+		 
+       fwrite(binbuffer, sizeof(byte), remainder, fnoise);
+       //printf("% d writing %d bytes at %ld\n",i, remainder ,fpos);
+       fpos = fpos + remainder;
+       if (fpos>=MAXFILESIZE || remainder==0)
+	     fpos=0;
         
-	  }
-	  
-	  usleep(33333);     
-	  memset(binbuffer, 0, RPIBUFFER);
-	  __sync_fetch_and_add (&(bufFiles[i].size),read_size);
+       fclose(fnoise);
+       pthread_mutex_unlock(&noise_mutex);
+              
+	   memset(binbuffer, 0, RPIBUFFER);
+	   usleep(33333);
+	   __sync_fetch_and_add (&(bufFiles[i].size),read_size);
     }
+
 
 	return 0;
 }
@@ -316,12 +268,13 @@ void *timer_handler(void*arg)
   int period = 0;
   FILE *fnoise;
   for (;;) {
-        int i=0,fd=0;
+        int i=0;
         long fsize=0;
         if (connectionNo>0)
            printf("%d ", snapshot++);
            
-        for (i=0; i < connectionNo; i++) {        
+        for (i=0; i < connectionNo; i++) 
+        {        
           int s = __sync_fetch_and_add( &(bufFiles[i].size), 0 );
           printf("%d ", FACTOR*s);
           __sync_fetch_and_and(&(bufFiles[i].size), 0);         
