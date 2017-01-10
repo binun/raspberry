@@ -1,10 +1,8 @@
-/*
-    C ECHO client example using sockets
-*/
-#include <stdio.h> //printf
-#include <string.h>    //strlen
-#include <sys/socket.h>    //socket
-#include <arpa/inet.h> //inet_addr
+
+#include <stdio.h> 
+#include <string.h>    
+#include <sys/socket.h>   
+#include <arpa/inet.h> 
 #include <memory.h>
 #include <string.h>
 #include <unistd.h>
@@ -18,7 +16,6 @@ int main(int argc , char *argv[])
     struct sockaddr_in server,client;
     int addr_size = sizeof(server);
      
-    //Create socket
     sock = socket(AF_INET , SOCK_STREAM, 0);
     if (sock == -1)
     {
@@ -28,12 +25,7 @@ int main(int argc , char *argv[])
     printf("Socket to connect to %s\n",argv[1] );
     memset((char *) &server, 0, sizeof(server));
             
-    //if (inet_aton(argv[1] , &server.sin_addr) == 0) 
-    //{
-        //printf("inet_aton() failed\n");
-        //return 1;
-    //}
-    
+   
     server.sin_addr.s_addr = inet_addr(argv[1]);
     server.sin_family = AF_INET;
     server.sin_port = htons( SERVPORT ); 
@@ -46,26 +38,22 @@ int main(int argc , char *argv[])
     }
      
     printf("Noise Client Connected\n");
-     
-    //keep communicating with server
+ 
     while(1)
     {      
 		char message[10] = ASK;
         
-        //send(sock , message, strlen(message) , 0);
         memset(server_reply,0,CLIENTBUF);
         
-        //int n = recvfrom(sock , server_reply , CLIENTBUF , 0,(struct sockaddr *) &server, &addr_size);
         int n = recv(sock , server_reply , CLIENTBUF , 0);
         if( n <= 0)
             printf("recv failed\n");
         
         else
-          //printf("%d bytes obtained \n", n); 
+          printf("%d bytes obtained \n", n); 
          
          memset(server_reply,0,CLIENTBUF);
-         
-         //usleep(30000);
+    
     }
      
     close(sock);

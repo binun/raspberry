@@ -33,12 +33,13 @@ pthread_mutex_t noise_mutex;
 bufferFor bufFiles[32];
 byte binbuffer[RPIBUFFER];
 int connectionNo = 0;
-int snapshot=1;
 int sockmode = SOCK_STREAM;
 int addresslen;
-int chain=1;
+
 long fpos=0;
 long MAXFILESIZE = 5368709120;
+
+FILE *fnoise = NULL;
                  
 //long MAXFILESIZE = 1073741824;
 
@@ -46,6 +47,7 @@ void *connection_handler(void*);
 void *timer_handler(void*);
 void *simulation_handler(void*);
 void *client_handler(void*);
+void *deliver_handler(void*);
 
 struct tm * current_time() {
     time_t rawtime;
@@ -70,8 +72,8 @@ int main(int argc, char *argv[])
 	struct sockaddr_in6 cli_addr, serv_addr;
     struct sched_param params1;
     pthread_t timerthread;
-  
     pthread_t clientthread;
+    pthread_t deliverthread;
     
     FILE *datefile;   
    
@@ -107,21 +109,9 @@ int main(int argc, char *argv[])
 		    return 0;
 	}
 	
+	fnoise = fopen(NOISEFILE, "r+b");
 	
-    if (SIMULATION) {
-		connectionNo = 4;
-		for (int i = 0; i < connectionNo; i++) 
-		{
-		   pthread_t simthread;
-           int *new_i = malloc(1);
-           *new_i = i;
-           pthread_create(&simthread, NULL, simulation_handler, (void*)(new_i));
-	    }
-	    pthread_create(&timerthread, NULL, timer_handler, NULL);
-	    while (1) {}
-	    return 0;
-	
-	}
+    
     
 	if((sockfd = socket(AF_INET6, SOCK_STREAM, 0)) < 0)
 		fprintf(stderr,"server: can't open stream socket\n"), exit(0);
@@ -133,12 +123,31 @@ int main(int argc, char *argv[])
     serv_addr.sin6_addr = in6addr_any;
     serv_addr.sin6_port = htons(RPIPORT);
    
-    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
-           fprintf(stderr,"server: can't bind local address\n"), exit(0);
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+           fprintf(stderr,"server: can't bind local address\n");
+           exit(0);
+	}
+	
+	if (SIMULATION) {
+		connectionNo = 4;
+		for (int i = 0; i < connectionNo; i++) 
+		{
+		   pthread_t simthread;
+           int *new_i = malloc(1);
+           *new_i = i;
+           pthread_create(&simthread, NULL, simulation_handler, (void*)(new_i));
+	    }
+	    pthread_create(&timerthread, NULL, timer_handler, NULL);
+	    pthread_create(&deliverthread, NULL, deliver_handler, NULL);
+	    while (1) {}
+	    return 0;
+	
+	}
 
 	pthread_create(&timerthread, NULL, timer_handler, NULL);
     params1.sched_priority = sched_get_priority_min(SCHED_FIFO);
     pthread_setschedparam(timerthread, SCHED_FIFO, &params1);
+    pthread_create(&deliverthread, NULL, deliver_handler, NULL);
     
     listen(sockfd, 5);
 	//Accept and incoming connection
@@ -193,27 +202,29 @@ void *connection_handler(void *connection)
            continue;
 	  }
 	   
-	   FILE *frecent = fopen(recnoisename, "a+b");
-       fwrite(binbuffer, sizeof(byte), read_size, frecent);
-       fclose(frecent);
+	   //FILE *frecent = fopen(recnoisename, "a+b");
+       //fwrite(binbuffer, sizeof(byte), read_size, frecent);
+       //fclose(frecent);
        
 	   pthread_mutex_lock(&noise_mutex);
 	   
-	   FILE *fnoise = fopen(NOISEFILE, "r+b");
-	   fseek(fnoise,fpos,SEEK_SET);      
-       
        int remainder = read_size;
+       fpos = ftell(fnoise);
+       
        if (MAXFILESIZE - fpos < read_size)
 		 remainder = (int)(MAXFILESIZE - fpos+1);
 		 
        fwrite(binbuffer, sizeof(byte), remainder, fnoise);
        //printf("% d writing %d bytes at %ld\n",i, remainder ,fpos);
-       fpos = fpos + remainder;
-       if (fpos>=MAXFILESIZE || remainder==0)
-	     fpos=0;
+     
+       if (fpos>=MAXFILESIZE || remainder==0) {
+		 rewind(fnoise);   
+	   }
         
-       fclose(fnoise);
+       ///fclose(fnoise);
+       fflush(fnoise); fsync(fileno(fnoise));
        pthread_mutex_unlock(&noise_mutex);
+       
               
 	   memset(binbuffer, 0, RPIBUFFER);
 	   __sync_fetch_and_add (&(bufFiles[i].size),read_size);
@@ -232,26 +243,26 @@ void *simulation_handler(void *socket_desc)
 	
 	   int read_size = RPIBUFFER;
 	   
-       FILE *frecent = fopen(recnoisename, "a+b");
-       fwrite(binbuffer, sizeof(byte), read_size, frecent);
-       fclose(frecent);
+       //FILE *frecent = fopen(recnoisename, "a+b");
+       //fwrite(binbuffer, sizeof(byte), read_size, frecent);
+      // fclose(frecent);
        
-	   pthread_mutex_lock(&noise_mutex);
-	   
-	   FILE *fnoise = fopen(NOISEFILE, "r+b");
-	   fseek(fnoise,fpos,SEEK_SET);      
+	   pthread_mutex_lock(&noise_mutex);  
        
        int remainder = read_size;
+       fpos = ftell(fnoise);
+       
        if (MAXFILESIZE - fpos < read_size)
 		 remainder = (int)(MAXFILESIZE - fpos+1);
 		 
        fwrite(binbuffer, sizeof(byte), remainder, fnoise);
        //printf("% d writing %d bytes at %ld\n",i, remainder ,fpos);
-       fpos = fpos + remainder;
-       if (fpos>=MAXFILESIZE || remainder==0)
-	     fpos=0;
+     
+       if (fpos>=MAXFILESIZE || remainder==0) {
+	     rewind(fnoise);
+	   }
         
-       fclose(fnoise);
+       fflush(fnoise); fsync(fileno(fnoise));
        pthread_mutex_unlock(&noise_mutex);
               
 	   memset(binbuffer, 0, RPIBUFFER);
@@ -265,25 +276,77 @@ void *simulation_handler(void *socket_desc)
 
 void *timer_handler(void*arg)
 {
-  int period = 0;
-  FILE *fnoise;
+  int period = 1;
   for (;;) {
         int i=0;
         long fsize=0;
         if (connectionNo>0)
-           printf("%d ", snapshot++);
+        //printf("%d ", period);
            
         for (i=0; i < connectionNo; i++) 
         {        
           int s = __sync_fetch_and_add( &(bufFiles[i].size), 0 );
-          printf("%d ", FACTOR*s);
+          //printf("%d ", FACTOR*s);
           __sync_fetch_and_and(&(bufFiles[i].size), 0);         
         }
       
         if (connectionNo>0)
-            printf("\n");
+            //printf("\n");
   	    sleep(1);
         period++;
   }
 
+}
+
+void *deliver_handler(void*arg)
+{
+    struct sockaddr_in me, client;
+    FILE *fnoise;
+    int sock,addr_size = sizeof(client);
+  
+    sock = socket(AF_INET , SOCK_STREAM, 0);
+    if (sock == -1)
+    {
+        printf("Could not create socket");
+    }
+    printf("NOISE Delivery  Socket created\n");
+    
+    me.sin_family = AF_INET;
+    me.sin_addr.s_addr = INADDR_ANY;
+    me.sin_port = htons( SERVPORT );
+     
+    if( bind(sock,(struct sockaddr *)&me , sizeof(me)) < 0)
+    {
+        printf("bind failed. Error");
+        return NULL;
+    }
+   
+    fnoise = fopen(NOISEFILE, "rb");
+    listen(sock , 3);
+    
+    int client_sock = accept(sock, (struct sockaddr *)&client, (socklen_t*)&addr_size);
+    if (client_sock<0) {
+		printf("could not create thread\n");
+        return NULL;
+	}
+	
+    printf("NOISE Client accepted\n");     
+    while( 1 )
+    {
+	   char server_reply[CLIENTBUF]="";
+       long fpos = ftell(fnoise);
+       int remainder = fread(server_reply, sizeof(unsigned char), CLIENTBUF, fnoise);
+       
+       if (fpos>=MAXFILESIZE || remainder<=0) {
+         rewind(fnoise);
+	   }
+         
+       printf("             REPLY %d at %ld\n",remainder,fpos);  
+       
+       write(client_sock ,server_reply , remainder); 
+       usleep(10000);
+    }
+    
+    fclose(fnoise);         
+    return NULL;
 }
