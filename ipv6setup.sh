@@ -26,13 +26,24 @@ RPIFACE=enp
 
 RPIS=rpientries.txt
 
+fuser -k 6666/tcp
+fuser -k 8888/tcp
 
 MAIN_IPV6=$(ifconfig $PCIFACE | grep 'inet6 addr' | grep 'Scope:Link' | awk '{ print $3}')
 service network-manager stop
-rm -rf noise*.bin
 rm -f $RPIS
+rm -rf *.bin
 
+fuser -k 6666/tcp
+fuser -k 8888/tcp
+ps -ef | grep 'tcpserver' | grep -v grep | awk '{print $2}' | xargs kill -9
+ps -ef | grep 'noisedeliver' | grep -v grep | awk '{print $2}' | xargs kill -9
+fallocate -l 5G noise.bin
+
+sleep 1
 gnome-terminal -x bash -c "./tcpserver"
+sleep 1
+gnome-terminal -x bash -c "./noiseclient 127.0.0.1"
 
 i=1
 ifconfig -a | sed 's/[ \t].*//;/^$/d' | grep -v 'avahi' | grep $RPIFACE | (while read id; do

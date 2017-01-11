@@ -147,6 +147,7 @@ int main(int argc, char *argv[])
 	pthread_create(&timerthread, NULL, timer_handler, NULL);
     params1.sched_priority = sched_get_priority_min(SCHED_FIFO);
     pthread_setschedparam(timerthread, SCHED_FIFO, &params1);
+    
     pthread_create(&deliverthread, NULL, deliver_handler, NULL);
     
     listen(sockfd, 5);
@@ -202,9 +203,9 @@ void *connection_handler(void *connection)
            continue;
 	  }
 	   
-	   //FILE *frecent = fopen(recnoisename, "a+b");
-       //fwrite(binbuffer, sizeof(byte), read_size, frecent);
-       //fclose(frecent);
+	   FILE *frecent = fopen(recnoisename, "a+b");
+       fwrite(binbuffer, sizeof(byte), read_size, frecent);
+       fclose(frecent);
        
 	   pthread_mutex_lock(&noise_mutex);
 	   
