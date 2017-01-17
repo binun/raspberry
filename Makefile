@@ -1,5 +1,4 @@
-all:
-	clean tcpserver noiseclient noisedeliver
+all: clean tcpserver noiseclient noisedeliver
 
 clean:
 	rm -f tcpserver noiseclient noisedeliver
