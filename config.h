@@ -12,7 +12,7 @@
 #define RECENT_NOISE_TIME 2
 #define FACTOR 4
 #define CLEAN_FACTOR 0.7
-#define SIMULATION 1
+#define SIMULATION 0
 #define RPIBUFFER 1048576
 #define MIN_REPLY 512
 

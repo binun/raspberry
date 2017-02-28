@@ -192,7 +192,7 @@ void *connection_handler(void *connection)
 	int i = conn->ordNo;
            
 	char recnoisename[64] = "";
-    sprintf(recnoisename,"recentnoise%d.bin",i);
+        printf("Started handling %d\n",i);
     
     for (;;) 
     {
@@ -203,9 +203,9 @@ void *connection_handler(void *connection)
            continue;
 	  }
 	   
-	   FILE *frecent = fopen(recnoisename, "a+b");
-       fwrite(binbuffer, sizeof(byte), read_size, frecent);
-       fclose(frecent);
+	   //FILE *frecent = fopen(recnoisename, "a+b");
+       //fwrite(binbuffer, sizeof(byte), read_size, frecent);
+       //fclose(frecent);
        
 	   pthread_mutex_lock(&noise_mutex);
 	   
@@ -216,7 +216,7 @@ void *connection_handler(void *connection)
 		 remainder = (int)(MAXFILESIZE - fpos+1);
 		 
        fwrite(binbuffer, sizeof(byte), remainder, fnoise);
-       //printf("% d writing %d bytes at %ld\n",i, remainder ,fpos);
+       printf("%d writing %d bytes at %ld\n",i, remainder ,fpos);
      
        if (fpos>=MAXFILESIZE || remainder==0) {
 		 rewind(fnoise);   
@@ -282,17 +282,17 @@ void *timer_handler(void*arg)
         int i=0;
         long fsize=0;
         if (connectionNo>0)
-        //printf("%d ", period);
+        printf("%d ", period);
            
         for (i=0; i < connectionNo; i++) 
         {        
           int s = __sync_fetch_and_add( &(bufFiles[i].size), 0 );
-          //printf("%d ", FACTOR*s);
-          __sync_fetch_and_and(&(bufFiles[i].size), 0);         
+          printf("%d ", FACTOR*s);
+          //__sync_fetch_and_and(&(bufFiles[i].size), 0);         
         }
       
         if (connectionNo>0)
-            //printf("\n");
+            printf("\n");
   	    sleep(1);
         period++;
   }
